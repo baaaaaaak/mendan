@@ -178,20 +178,22 @@
     .num, .item input.num { letter-spacing: .08em; }
     .item .val.num:not(.filled), .item input.num::placeholder { letter-spacing: .01em; }
 
-    /* 日付と枠を1列に並べて横スクロール */
+    /* 左に日付の窓、右に枠の帯（横スクロール）。枠は帯の左端で、日付は窓の両端で、それぞれの箱ごと切れる。
+       切り取りを script に頼らないので、速く送っても枠が日付側に食い込まない */
+    .dates { display: flex; align-items: center; margin: 10px -22px 0 0; }
+    /* 窓にはいま送っている日の日付を出す。次の日の日付が来ると押し出されて、窓の左端で切れて消える（位置は script） */
+    .dwin { flex: none; position: relative; width: 38px; height: 54px; overflow: hidden; margin-right: 16px; }
+    .dwin .date { position: absolute; left: 0; top: 11px; }
     .strip {
-      display: flex; align-items: center; gap: 8px; overflow-x: auto; margin: 10px -22px 0; padding: 4px 22px;
+      flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; overflow-x: auto; padding: 4px 22px 4px 0;
       scrollbar-width: none; -webkit-overflow-scrolling: touch;
     }
     .strip::-webkit-scrollbar { display: none; }
-    /* 1日分（日付＋枠）をまとめ、日付はその日の枠を送っている間だけ左端に残す。次の日が来ると押し出される。
-       押し出される途中で止まったときは script で近い方の位置へ寄せる */
+    /* 1日分の枠。2日目からは前に日付を置く。この日付は窓の日付と同じ位置を流れ、帯の左端で切れて窓に引き継がれる */
     .day { flex: none; display: flex; align-items: center; gap: 8px; }
     .day + .day { margin-left: 6px; }
-    .date {
-      flex: none; display: flex; align-items: flex-start; gap: 1px; color: var(--d-label); font-size: 11px; font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums;
-      position: sticky; left: 0; z-index: 1; margin-right: 4px;
-    }
+    .strip .date { margin-right: 8px; }
+    .date { flex: none; display: flex; align-items: flex-start; gap: 1px; color: var(--d-label); font-size: 11px; font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; }
     .date .md { position: relative; width: 28px; height: 32px; }
     .date .md::before { content: ""; position: absolute; left: 3px; right: 3px; top: 50%; height: 1px; background: var(--d-label); transform: rotate(-45deg); }
     .date .m { position: absolute; left: 0; top: 0; }
@@ -206,12 +208,6 @@
       font-family: var(--round); font-weight: 500; font-size: 12px; line-height: 1.35; font-variant-numeric: tabular-nums; text-align: left;
     }
     .slot span { padding-left: 3px; }
-    /* 左端に残った日付の右（間隔 12px、位置は --cut）より左にはみ出た部分を切る。
-       スクロールと同じ処理の中で切るので、速く送っても枠が日付側に食い込まない。使えない環境では script で切る */
-    @keyframes slot-cut { from { clip-path: inset(0 0 0 0); } to { clip-path: inset(0 0 0 100%); } }
-    @supports (animation-timeline: view()) {
-      .slot { animation: slot-cut linear both; animation-timeline: view(inline var(--cut, 72px) 0px); animation-range: exit 0% exit 100%; }
-    }
     .slot[aria-pressed="true"] { background: var(--d-green); color: #111; }
     .none { font-size: 12px; color: var(--d-hint); padding: 10px 0; }
 
@@ -249,7 +245,7 @@
     <input id="sid" class="num" inputmode="numeric" autocomplete="off" maxlength="10" placeholder="がくせきばんごう" aria-label="学籍番号">
   </label>
   <p class="big">にちじ<sup class="hint" id="dateHint">スクロールで選択</sup></p>
-  <div class="strip" id="strip"><p class="none">読み込み中…</p></div>
+  <div class="dates"><div class="dwin" id="dwin"></div><div class="strip" id="strip"><p class="none">読み込み中…</p></div></div>
 
   <div class="gap-mid"></div>
   <button class="apply big" id="apply">よやく</button>
@@ -378,40 +374,47 @@
     const open = data.slots.filter((s) => s.available);
     if (!open.some((s) => s.id === selectedId)) selectedId = null;
     if (!open.length) {
+      $('dwin').innerHTML = '';
       $('strip').innerHTML = '<p class="none">予約できる日時はありません</p>';
       return;
     }
+    const label = (s, inStrip) => {
+      const [m, d] = md(s.date);
+      const a11y = inStrip ? 'aria-hidden="true"' : `aria-label="${+m}月${+d}日(${esc(wdOf(s))})"`;
+      return `<span class="date" data-day="${esc(s.date)}" ${a11y}><span class="md"><span class="m">${m}</span><span class="d">${d}</span></span><span class="w">${esc(wdOf(s))}</span></span>`;
+    };
     let html = '';
+    let win = '';
     let last = '';
     open.forEach((s) => {
       if (s.date !== last) {
-        const [m, d] = md(s.date);
         if (last) html += '</span>';
-        html += `<span class="day"><span class="date" aria-label="${+m}月${+d}日(${esc(wdOf(s))})"><span class="md"><span class="m">${m}</span><span class="d">${d}</span></span><span class="w">${esc(wdOf(s))}</span></span>`;
+        html += `<span class="day" data-day="${esc(s.date)}">${last ? label(s, true) : ''}`;
+        win += label(s, false);
         last = s.date;
       }
       html += `<button class="slot" data-id="${esc(s.id)}" aria-pressed="${s.id === selectedId}">
         <b>${esc(s.start)}</b><span>-${esc(s.end)}</span></button>`;
     });
+    $('dwin').innerHTML = win;
     $('strip').innerHTML = html + '</span>';
-    const date = $('strip').querySelector('.date');
-    const pad = parseFloat(getComputedStyle($('strip')).paddingLeft) || 0;
-    $('strip').style.setProperty('--cut', `${pad + date.offsetWidth + 12}px`);
-    clipSlots();
+    // 窓の幅は日付1つ分。帯の中の日付と同じ間隔（16px）になる
+    $('dwin').style.width = `${$('dwin').firstElementChild.offsetWidth}px`;
+    placeDates();
   }
 
-  // 左端に残った日付の下に枠が潜り込まないよう、日付の右（いつもの間隔 12px）より左にはみ出た部分を切る。
-  // 日付の後ろを塗りつぶさないので、背景の線と点はそのまま見える。CSS で切れる環境では何もしない
-  const cssCut = window.CSS && CSS.supports('animation-timeline', 'view()');
-  function clipSlots() {
-    if (cssCut) return;
-    $('strip').querySelectorAll('.day').forEach((day) => {
-      const edge = day.firstElementChild.getBoundingClientRect().right + 12;
-      day.querySelectorAll('.slot').forEach((c) => {
-        const r = c.getBoundingClientRect();
-        const cut = Math.min(edge - r.left, r.width);
-        c.style.clipPath = cut > 0.5 ? `inset(0 0 0 ${cut}px)` : '';
-      });
+  // 窓の日付の位置。その日の最初の枠が帯の左端からどれだけ右にあるか（rel）で決める。
+  // 帯の中を流れてきた日付が窓に入ると同じ位置に重なり、左端（0）まで来たらそこにとどまる。
+  // 次の日の日付が 16px まで近づくと押し出される
+  function placeDates() {
+    const win = $('dwin');
+    const dw = win.offsetWidth;
+    const base = $('strip').getBoundingClientRect().left;
+    const rel = [...$('strip').querySelectorAll('.day')].map((day) => day.querySelector('.slot').getBoundingClientRect().left - base);
+    [...win.children].forEach((el, k) => {
+      let x = Math.max(0, rel[k]);
+      if (k + 1 < rel.length) x = Math.min(x, rel[k + 1] - dw - 16);
+      el.style.transform = `translateX(${x}px)`;
     });
   }
   // 日付が押し出される途中で止まったら、近い方へ寄せる：
@@ -421,16 +424,12 @@
   function snapDates() {
     if (touching || drag || glide.frame) return;
     const st = $('strip');
-    const line = st.getBoundingClientRect().left + (parseFloat(getComputedStyle(st).paddingLeft) || 0);
-    for (const day of st.querySelectorAll('.day')) {
-      const next = day.nextElementSibling;
-      if (!next) break;
-      const end = day.getBoundingClientRect().right;
-      const full = day.firstElementChild.offsetWidth + 4;  // 日付＋右の余白。これより狭くなると押し出され始める
-      const gap = next.getBoundingClientRect().left - end;  // 次の日までの間隔
-      const r = end - line;
-      if (r < full - 1 && r > 1 - gap) {
-        const move = r > (full - gap) / 2 ? r - full : r + gap;
+    const full = $('dwin').offsetWidth + 16;  // 次の日の最初の枠がこれより左に来ると、窓の日付が押し出され始める
+    const base = st.getBoundingClientRect().left;
+    for (const day of [...st.querySelectorAll('.day')].slice(1)) {
+      const r = day.querySelector('.slot').getBoundingClientRect().left - base;
+      if (r > 1 && r < full - 1) {
+        const move = r > full / 2 ? r - full : r;
         glide.pos = st.scrollLeft;
         glide.target = Math.max(0, Math.min(maxLeft(), st.scrollLeft + move));
         startGlide();
@@ -440,11 +439,10 @@
   }
   const snapLater = () => { clearTimeout(snapTimer); snapTimer = setTimeout(snapDates, 150); };
 
-  let clipFrame = 0;
   $('strip').addEventListener('scroll', () => {
     $('dateHint').hidden = true;
     started();
-    if (!clipFrame) clipFrame = requestAnimationFrame(() => { clipFrame = 0; clipSlots(); });
+    placeDates();
     snapLater();
   }, { passive: true });
   $('strip').addEventListener('touchstart', () => { touching = true; }, { passive: true });
@@ -537,12 +535,11 @@
     disarm();
   });
 
-  const dateOf = (chip) => chip && chip.parentElement.querySelector('.date');
-
+  // 窓と帯の両方にある、選んだ枠の日の日付
   function markDate(on) {
-    $('strip').querySelectorAll('.date.on').forEach((x) => x.classList.remove('on'));
-    const date = on && dateOf($('strip').querySelector('.slot[aria-pressed="true"]'));
-    if (date) date.classList.add('on');
+    document.querySelectorAll('.date.on').forEach((x) => x.classList.remove('on'));
+    const chip = $('strip').querySelector('.slot[aria-pressed="true"]');
+    if (on && chip) document.querySelectorAll(`.date[data-day="${chip.parentElement.dataset.day}"]`).forEach((x) => x.classList.add('on'));
   }
 
   // 選んだ枠が横スクロールの外にあっても確かめられるよう、その日の始まりから見える位置まで送る。
@@ -551,13 +548,13 @@
     const st = $('strip');
     const chip = st.querySelector('.slot[aria-pressed="true"]');
     if (!chip) return;
-    // 左端に残っている日付は位置が動くので、測るのは1日分のまとまりの方
-    const date = chip.parentElement;
-    const pad = parseFloat(getComputedStyle(st).paddingLeft) || 0;
+    const first = chip.parentElement.querySelector('.slot');
+    const pad = parseFloat(getComputedStyle(st).paddingRight) || 0;
     const base = st.getBoundingClientRect().left;
     const leftOf = (el) => st.scrollLeft + el.getBoundingClientRect().left - base;
-    let target = leftOf(date || chip) - pad;
-    // 日付から並べると枠が右にはみ出す場合は、枠の右端が見える位置にする
+    // その日の最初の枠を帯の左端に。窓にはその日の日付が出る
+    let target = leftOf(first);
+    // それだと枠が右にはみ出す場合は、枠の右端が見える位置にする
     const chipRight = leftOf(chip) + chip.offsetWidth + pad;
     if (chipRight > target + st.clientWidth) target = chipRight - st.clientWidth;
     stopGlide();
