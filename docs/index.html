@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head><meta name="viewport" content="width=device-width, initial-scale=1"><title>ばくめんだん 面談予約フォーム</title><script>window.MENDAN_API = "https://script.google.com/macros/s/AKfycbyuMiQIn4AaIDU-7sJIOGCkiwBwVwXMt2IfTt0FrxP675mtXYAh9lylr8TumqJDxuhL/exec";</script>
+  <base target="_top">
+  <meta charset="utf-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+1:wght@200;300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* 白地・黒文字・グレー文字・赤のアクセント */
+    --bg: #ffffff;
+    --paper: #f4f4f1;       /* 学生ページの地色 */
+    --soft: #8e8e89;        /* 入力済みでない項目の中間グレー */
+    --faint: #c8c8c3;       /* 未入力・未選択の薄いグレー */
+    --ink: #111111;
+    --ink-2: #444444;
+    --ink-3: #8c8c8c;
+    --ink-4: #c2c2c2;
+    --line: #ececec;
+    --line-2: #d9d9d9;
+    --surface: #f3f3f3;
+    --surface-hover: #e8e8e8;
+    --card: #f7f7f7;
+    --accent: #e5322d;
+    --on-accent: #ffffff;
+    --accent-soft: #fdecea;
+    --danger: #e5322d;
+    --radius: 14px;
+    --font: "M PLUS 1", "Hiragino Sans", "Yu Gothic", sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body {
+    font-family: var(--font);
+    font-weight: 300;
+    font-size: 15px;
+    line-height: 1.8;
+    letter-spacing: .02em;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, p { margin: 0; }
+  h1 { font-weight: 300; font-size: 28px; line-height: 1.3; }
+  h2 { font-weight: 400; font-size: 17px; display: flex; align-items: center; gap: 10px; }
+  h3 { font-weight: 400; font-size: 15px; }
+
+  /* スマートフォン基準。PCでも同じ幅のまま中央に置く */
+  .wrap { max-width: 440px; margin: 0 auto; padding: 40px 22px 64px; }
+  .muted { color: var(--ink-3); }
+  .err { color: var(--danger); font-size: 13px; font-weight: 400; }
+  .err:empty { display: none; }
+
+  .card { background: var(--card); border-radius: var(--radius); padding: 32px; }
+  @media (max-width: 480px) { .card { padding: 24px 20px; } }
+
+  .field { display: grid; gap: 8px; margin-top: 24px; }
+  .field label, .field .label { font-size: 12px; font-weight: 400; color: var(--ink-3); letter-spacing: .06em; }
+  /* 入力欄は下線だけ */
+  input, select {
+    font: inherit; font-weight: 300; font-size: 18px; color: var(--ink);
+    padding: 8px 0 12px; border: 0; border-bottom: 1px solid var(--line-2); border-radius: 0;
+    background: transparent; outline: none; width: 100%; -webkit-appearance: none; appearance: none;
+  }
+  input:focus, select:focus { border-bottom-color: var(--ink); }
+  input::placeholder { color: var(--ink-4); }
+  input.bad { border-bottom-color: var(--danger); }
+  input[type="date"], input[type="time"], input[type="number"] { font-size: 16px; }
+
+  button { font: inherit; cursor: pointer; }
+  .primary, .ghost { border-radius: 999px; padding: 10px 24px; font-size: 14px; font-weight: 400; letter-spacing: .06em; }
+  .primary { background: var(--ink); color: #fff; border: 0; }
+  .primary:hover { background: #000; }
+  .primary:disabled { background: var(--surface); color: var(--ink-4); cursor: default; }
+  .ghost { background: transparent; color: var(--ink-2); border: 1px solid var(--line-2); }
+  .ghost:hover { border-color: var(--ink); color: var(--ink); }
+  .link { background: none; border: 0; padding: 0; color: var(--ink-3); font-size: 12px; font-weight: 400; letter-spacing: .06em; }
+  .link:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+  .small { padding: 7px 16px; font-size: 13px; }
+
+  .row { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+</style>
+
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* 学生ページだけの暗い配色。入力した値と選んだ枠は緑 */
+    :root {
+      --d-bg: #141416;
+      --d-label: #8e8e93;
+      --d-hint: #8e8e93;
+      --d-chip: #3a3a3c;
+      --d-chip-ink: #e5e5ea;
+      --d-green: #5cf59b;
+      --d-white: #f2f2f2;
+      --d-err: #ff7a6b;
+      --round: "M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", sans-serif;
+    }
+    html, body { background: var(--d-bg); color: var(--d-label); overflow-x: hidden; }
+    /* 背景の斜線：太さと間隔をまぜた縞を、画面より大きな層に敷いて全体の傾きをゆっくり変える */
+    #lines {
+      --ln: rgba(255, 255, 255, .045);
+      position: fixed; left: 50%; top: 50%; width: 170vmax; height: 170vmax; margin: -85vmax 0 0 -85vmax;
+      pointer-events: none; z-index: 0;
+      background: repeating-linear-gradient(-45deg,
+        transparent 0 9px, var(--ln) 9px 10px,
+        transparent 10px 23px, var(--ln) 23px 25px,
+        transparent 25px 30px, var(--ln) 30px 31px,
+        transparent 31px 49px, var(--ln) 49px 50px,
+        transparent 50px 57px, var(--ln) 57px 59.5px,
+        transparent 59.5px 71.5px, var(--ln) 71.5px 72.5px,
+        transparent 72.5px 77.5px);
+    }
+    @keyframes tilt { from { transform: rotate(-7deg); } to { transform: rotate(9deg); } }
+
+    /* アクセントの緑の小さな点を格子に。間隔は画面幅に比例させ、どの機種でも横に同じ数（約4.4マス）並ぶ。
+       iPhone 16（393px）で 90px。内容の最大幅 440px を超える画面ではそれ以上広げない。
+       background-position を中央にして、左右・上下の余白をそろえる */
+    #dots {
+      --dot: calc(min(100vw, 440px) / 4.37);
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background: radial-gradient(circle, rgba(92, 245, 155, .55) 0 .6px, transparent 1px) center / var(--dot) var(--dot);
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      #lines { animation: tilt 22s ease-in-out infinite alternate; }
+    }
+    .page { position: relative; z-index: 1; }
+    body { font-family: var(--round); font-weight: 500; }
+
+    .page {
+      max-width: 440px; margin: 0 auto; min-height: 100vh; min-height: 100dvh;
+      display: flex; flex-direction: column; padding: 0 22px 36px;
+    }
+    /* 内容は画面の下寄りに置く */
+    .gap-top { flex: 1; min-height: 72px; }
+    .gap-mid { flex: none; height: 56px; }
+
+    /* 見出しと各項目は同じ大きな文字。右肩に小さな説明 */
+    /* 大きな文字は画面幅に合わせる。一番長い「がくせきばんごう＋説明」が1行に収まる大きさ（375px幅で約31px、最大36px） */
+    :root { --big: clamp(24px, calc((100vw - 124px) / 8), 36px); }
+    .big { font-weight: 800; font-size: var(--big); line-height: 1.3; letter-spacing: .01em; color: var(--d-label); }
+    .hint { white-space: nowrap; font-size: 11px; font-weight: 500; color: var(--d-hint); vertical-align: top; margin-left: 6px; line-height: 2.2; letter-spacing: .02em; }
+    /* 見出しの「ばくめんだん」は項目より少し小さく明るく */
+    .big.mast, .done .big.mast { font-size: calc(var(--big) * .8); color: #d1d1d6; margin-bottom: 44px; }
+
+    .item { display: block; position: relative; cursor: text; }
+    .item .val.filled { color: var(--d-green); }
+    .item input {
+      display: none; width: 100%; font: inherit; font-family: var(--round); font-weight: 800; font-size: var(--big); line-height: 1.3;
+      color: var(--d-green); background: none; border: 0; padding: 0; margin: 0; outline: none; caret-color: var(--d-green);
+      border-radius: 0; box-shadow: none; letter-spacing: .01em;
+    }
+    .item input::placeholder { color: #55555a; }
+    .item.editing .val, .item.editing .hint, .item.editing .err { display: none; }
+    .item.editing input { display: block; }
+    .item .err { white-space: nowrap; font-size: 10px; font-weight: 500; color: var(--d-err); margin-left: 8px; vertical-align: top; line-height: 2.6; }
+    /* 学籍番号の数字だけ字間を広く。表示中も入力中も同じにする。ひらがなの見出しは他の項目と同じ字間 */
+    .num, .item input.num { letter-spacing: .08em; }
+    .item .val.num:not(.filled), .item input.num::placeholder { letter-spacing: .01em; }
+
+    /* 日付と枠を1列に並べて横スクロール */
+    .strip {
+      display: flex; align-items: center; gap: 8px; overflow-x: auto; margin: 10px -22px 0; padding: 4px 22px;
+      scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    }
+    .strip::-webkit-scrollbar { display: none; }
+    .date { flex: none; display: flex; align-items: flex-start; gap: 1px; color: var(--d-label); font-size: 11px; font-weight: 500; line-height: 1; margin: 0 0 0 6px; font-variant-numeric: tabular-nums; }
+    .date:first-child { margin-left: 0; }
+    .date .md { position: relative; width: 28px; height: 32px; }
+    .date .md::before { content: ""; position: absolute; left: 3px; right: 3px; top: 50%; height: 1px; background: var(--d-label); transform: rotate(-45deg); }
+    .date .m { position: absolute; left: 0; top: 0; }
+    .date .d { position: absolute; right: 0; bottom: 0; }
+    .date .w { font-size: 9px; }
+    .slot {
+      flex: none; display: grid; justify-items: start; gap: 0; height: 46px; padding: 6px 10px;
+      background: var(--d-chip); color: var(--d-chip-ink); border: 0; border-radius: 8px;
+      font-family: var(--round); font-weight: 500; font-size: 12px; line-height: 1.35; font-variant-numeric: tabular-nums; text-align: left;
+    }
+    .slot span { padding-left: 3px; }
+    .slot[aria-pressed="true"] { background: var(--d-green); color: #111; }
+    .none { font-size: 12px; color: var(--d-hint); padding: 10px 0; }
+
+    /* しんせい：1回目で「しんせい?」、2回目で確定 */
+    .apply { align-self: flex-start; background: none; border: 0; padding: 8px 24px 8px 0; text-align: left; font-family: var(--round); cursor: pointer; }
+    .apply.armed { color: var(--d-green); }
+    .apply:disabled { opacity: .6; }
+    .msg { font-size: 11px; font-weight: 500; color: var(--d-hint); line-height: 1.7; min-height: 38px; margin-top: 2px; }
+    .msg.err { color: var(--d-err); }
+
+    /* 完了 */
+    .done .big { color: var(--d-white); }
+    .fin { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+    .fin svg { flex: none; width: 36px; height: 36px; color: var(--d-green); }
+    .fin p { font-size: 9px; font-weight: 500; color: var(--d-hint); line-height: 1.8; }
+    /* 1文1行。長い文は空白の位置でだけ折り、行の長さをそろえて泣き別れを防ぐ */
+    .fin p .ln { display: block; word-break: keep-all; text-wrap: balance; }
+    .fin b { color: var(--d-white); font-weight: 500; white-space: nowrap; }
+  </style>
+</head>
+<body>
+<div id="lines" aria-hidden="true"></div>
+<div id="dots" aria-hidden="true"></div>
+
+<section class="page" id="form">
+  <div class="gap-top"></div>
+  <h1 class="big mast"><span id="zemi">ばくめんだん</span><sup class="hint" id="title">面談予約フォーム</sup></h1>
+
+  <label class="item big" id="nameItem">
+    <span class="val" id="nameVal">おなまえ</span><sup class="hint">タップで入力</sup>
+    <input id="name" autocomplete="name" placeholder="おなまえ" aria-label="氏名">
+  </label>
+  <label class="item big" id="sidItem">
+    <span class="val num" id="sidVal">がくせきばんごう</span><sup class="hint">タップで入力</sup><span class="err" id="sidErr"></span>
+    <input id="sid" class="num" inputmode="numeric" autocomplete="off" maxlength="10" placeholder="がくせきばんごう" aria-label="学籍番号">
+  </label>
+  <p class="big">にちじ<sup class="hint" id="dateHint">スクロールで選択</sup></p>
+  <div class="strip" id="strip"><p class="none">読み込み中…</p></div>
+
+  <div class="gap-mid"></div>
+  <button class="apply big" id="apply">しんせい</button>
+  <p class="msg" id="msg"></p>
+</section>
+
+<section class="page done" id="done" hidden>
+  <div class="gap-top"></div>
+  <h1 class="big mast" id="zemi2">ばくめんだん</h1>
+  <p class="big" id="dName"></p>
+  <p class="big num" id="dSid"></p>
+  <p class="big" id="dDate"></p>
+  <p class="big" id="dTime"></p>
+  <div class="gap-mid"></div>
+  <div class="fin">
+    <p id="dNote"></p>
+    <svg viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19l8 9L31 6"/></svg>
+  </div>
+</section>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const STORE = 'mendan.me';
+  let data = null;
+  let selectedId = null;
+  let armed = false;  // 1回目のしんせいで true。項目を触ると戻る
+
+  // GitHub Pages 版では MENDAN_API（ウェブアプリの URL）へ送る。text/plain のままにして事前確認の通信を避ける
+  const run = (fn, ...args) => window.MENDAN_API
+    ? fetch(window.MENDAN_API, { method: 'POST', body: JSON.stringify({ fn, args }) })
+      .then((r) => r.json())
+      .then((r) => (r.ok ? r.result : Promise.reject(new Error(r.error))))
+    : new Promise((resolve, reject) => {
+      google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args);
+    });
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  // サーバーと同じ正規化：全角英数を半角に、空白を除く
+  const normId = (v) => String(v || '').replace(/[！-～]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)).replace(/\s/g, '').toUpperCase();
+  const placeOf = (s) => (s && s.note) || (data && data.place) || '';
+  // 月日は2桁にそろえる（11/2 → 11/02）。幅がそろって見える
+  const md = (date) => date.split('-').slice(1);
+  const wdOf = (s) => ((s.dateLabel || '').match(/\((.)\)/) || [])[1] || '';
+  // 7桁の数字で、先頭が受付範囲（例 3324〜3326）に入ること。サーバーでも同じ判定をする
+  const idFormatOk = (sid) => {
+    try { return !(data && data.idPattern) || new RegExp(data.idPattern).test(sid); } catch (_) { return true; /* 形式が壊れていても止めない */ }
+  };
+  const idInRange = (sid) => {
+    const r = data && data.idRange;
+    if (!r) return true;
+    const head = sid.slice(0, r[0].length);
+    return head >= r[0] && head <= r[1];
+  };
+  const idOk = (sid) => idFormatOk(sid) && idInRange(sid);
+
+  // 何か操作を始めたら、見出し横の「面談予約フォーム」も消す
+  const started = () => { $('title').hidden = true; };
+
+  // ---- おなまえ・がくせきばんごう：見出しの文字をタップするとその場で入力欄になる
+
+  const fields = [
+    { item: 'nameItem', input: 'name', val: 'nameVal', label: 'おなまえ' },
+    { item: 'sidItem', input: 'sid', val: 'sidVal', label: 'がくせきばんごう' },
+  ];
+
+  function showValue(f) {
+    const v = $(f.input).value.trim();
+    $(f.val).textContent = v || f.label;
+    $(f.val).classList.toggle('filled', !!v);
+    // 一度入力したら説明は出さない
+    $(f.item).querySelector('.hint').hidden = !!v;
+  }
+
+  fields.forEach((f) => {
+    $(f.item).addEventListener('click', () => {
+      if ($(f.item).classList.contains('editing')) return;
+      $(f.item).classList.add('editing');
+      $(f.input).focus();
+      started();
+      disarm();
+    });
+    $(f.input).addEventListener('blur', () => {
+      if (f.input === 'sid') $('sid').value = normId($('sid').value);
+      $(f.item).classList.remove('editing');
+      showValue(f);
+      checkSid();
+      saveMe();
+    });
+    $(f.input).addEventListener('keydown', (e) => { if (e.key === 'Enter') $(f.input).blur(); });
+    $(f.input).addEventListener('input', disarm);
+  });
+
+  function checkSid() {
+    const sid = normId($('sid').value);
+    $('sidErr').textContent = sid && data && !idOk(sid) ? '番号を確認' : '';
+  }
+
+  function restoreMe() {
+    try {
+      const me = JSON.parse(localStorage.getItem(STORE) || '{}');
+      $('name').value = me.name || '';
+      $('sid').value = me.sid || '';
+    } catch (_) { /* 保存できない環境では毎回入力 */ }
+    fields.forEach(showValue);
+  }
+  function saveMe() {
+    try { localStorage.setItem(STORE, JSON.stringify({ name: $('name').value, sid: $('sid').value })); } catch (_) { /* 同上 */ }
+  }
+
+  // ---- にちじ：予約できる枠だけを日付ごとに並べる
+
+  async function loadSlots() {
+    try {
+      data = await run('getPublicData');
+      $('zemi').textContent = $('zemi2').textContent = data.zemi;
+      $('title').textContent = data.title;
+      document.title = [data.zemi, data.title].filter(Boolean).join(' ');
+      renderSlots();
+      checkSid();
+    } catch (err) {
+      $('strip').innerHTML = '<p class="none">読み込めませんでした</p>';
+    }
+  }
+
+  function renderSlots() {
+    const open = data.slots.filter((s) => s.available);
+    if (!open.some((s) => s.id === selectedId)) selectedId = null;
+    if (!open.length) {
+      $('strip').innerHTML = '<p class="none">予約できる日時はありません</p>';
+      return;
+    }
+    let html = '';
+    let last = '';
+    open.forEach((s) => {
+      if (s.date !== last) {
+        const [m, d] = md(s.date);
+        html += `<span class="date" aria-label="${+m}月${+d}日(${esc(wdOf(s))})"><span class="md"><span class="m">${m}</span><span class="d">${d}</span></span><span class="w">${esc(wdOf(s))}</span></span>`;
+        last = s.date;
+      }
+      html += `<button class="slot" data-id="${esc(s.id)}" aria-pressed="${s.id === selectedId}">
+        <b>${esc(s.start)}</b><span>-${esc(s.end)}</span></button>`;
+    });
+    $('strip').innerHTML = html;
+  }
+
+  $('strip').addEventListener('scroll', () => { $('dateHint').hidden = true; started(); }, { passive: true });
+
+  // マウス操作の横送り。ホイールはばねで目標へ（少し行き過ぎて戻る）、
+  // つかんで離したときは慣性で少し流れてから止まる。タッチとトラックパッドの横入力は標準のまま
+  const glide = { pos: 0, vel: 0, target: null, frame: 0 };
+  const maxLeft = () => $('strip').scrollWidth - $('strip').clientWidth;
+
+  function step() {
+    const st = $('strip');
+    if (glide.target !== null) {
+      glide.vel = (glide.vel + (glide.target - glide.pos) * 0.1) * 0.66;
+      if (Math.abs(glide.target - glide.pos) < 0.3 && Math.abs(glide.vel) < 0.3) {
+        glide.pos = glide.target;
+        glide.target = null;
+        glide.vel = 0;
+      }
+    } else {
+      glide.vel *= 0.93;
+    }
+    glide.pos += glide.vel;
+    // 端では止める
+    if (glide.pos < 0 || glide.pos > maxLeft()) {
+      glide.pos = Math.max(0, Math.min(maxLeft(), glide.pos));
+      glide.vel = 0;
+    }
+    st.scrollLeft = glide.pos;
+    if (glide.target !== null || Math.abs(glide.vel) > 0.2) glide.frame = requestAnimationFrame(step);
+    else glide.frame = 0;
+  }
+  function startGlide() {
+    if (!glide.frame) glide.frame = requestAnimationFrame(step);
+  }
+  function stopGlide() {
+    cancelAnimationFrame(glide.frame);
+    glide.frame = 0;
+    glide.target = null;
+    glide.vel = 0;
+  }
+
+  $('strip').addEventListener('wheel', (e) => {
+    const st = $('strip');
+    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+    const from = glide.target === null ? st.scrollLeft : glide.target;
+    if ((e.deltaY < 0 && from <= 0) || (e.deltaY > 0 && from >= maxLeft() - 1)) return;
+    e.preventDefault();
+    if (!glide.frame) glide.pos = st.scrollLeft;
+    const delta = e.deltaMode === 1 ? e.deltaY * 32 : e.deltaY;  // 行単位のホイールは画素に換算
+    glide.target = Math.max(0, Math.min(maxLeft(), from + delta));
+    startGlide();
+  }, { passive: false });
+
+  let drag = null;
+  $('strip').addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'mouse') return;
+    stopGlide();
+    drag = { x: e.clientX, left: $('strip').scrollLeft, moved: false, lastX: e.clientX, lastT: e.timeStamp, v: 0 };
+  });
+  window.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x;
+    if (Math.abs(dx) > 4) drag.moved = true;
+    const dt = Math.max(1, e.timeStamp - drag.lastT);
+    // 1フレーム（約16ms）あたりの速さを、直近の動きに重みをつけて覚えておく
+    drag.v = drag.v * 0.6 + ((drag.lastX - e.clientX) / dt) * 16 * 0.4;
+    drag.lastX = e.clientX;
+    drag.lastT = e.timeStamp;
+    $('strip').scrollLeft = drag.left - dx;
+  });
+  window.addEventListener('pointerup', (e) => {
+    if (drag && drag.moved && e.timeStamp - drag.lastT < 80) {
+      glide.pos = $('strip').scrollLeft;
+      glide.vel = drag.v;
+      startGlide();
+    }
+    setTimeout(() => { drag = null; }, 0);
+  });
+  // つかんで動かしたあとのクリックでは枠を選ばない
+  $('strip').addEventListener('click', (e) => { if (drag && drag.moved) { e.stopImmediatePropagation(); } }, true);
+  $('strip').addEventListener('click', (e) => {
+    const b = e.target.closest('.slot');
+    if (!b) return;
+    selectedId = b.dataset.id;
+    $('strip').querySelectorAll('.slot').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    $('dateHint').hidden = true;
+    started();
+    disarm();
+  });
+
+  // 選んだ枠が横スクロールの外にあっても確かめられるよう、その日付から見える位置まで送る
+  function revealSelected() {
+    const st = $('strip');
+    const chip = st.querySelector('.slot[aria-pressed="true"]');
+    if (!chip) return;
+    let date = chip.previousElementSibling;
+    while (date && !date.classList.contains('date')) date = date.previousElementSibling;
+    const pad = parseFloat(getComputedStyle(st).paddingLeft) || 0;
+    const base = st.getBoundingClientRect().left;
+    const leftOf = (el) => st.scrollLeft + el.getBoundingClientRect().left - base;
+    let target = leftOf(date || chip) - pad;
+    // 日付から並べると枠が右にはみ出す場合は、枠の右端が見える位置にする
+    const chipRight = leftOf(chip) + chip.offsetWidth + pad;
+    if (chipRight > target + st.clientWidth) target = chipRight - st.clientWidth;
+    stopGlide();
+    glide.pos = st.scrollLeft;
+    glide.target = Math.max(0, Math.min(maxLeft(), target));
+    startGlide();
+  }
+
+  // ---- しんせい（2回タップで確定）
+
+  function disarm() {
+    if (!armed && !$('msg').textContent) return;
+    armed = false;
+    $('apply').classList.remove('armed');
+    $('apply').textContent = 'しんせい';
+    say('');
+  }
+
+  function say(html, isErr) {
+    $('msg').innerHTML = html;
+    $('msg').classList.toggle('err', !!isErr);
+  }
+
+  function missing() {
+    const sid = normId($('sid').value);
+    const out = [];
+    if (!$('name').value.trim()) out.push('おなまえ');
+    if (!sid) out.push('がくせきばんごう');
+    if (!selectedId) out.push('にちじ');
+    return out;
+  }
+
+  // 入力はあるが使えない学籍番号：桁や形式の誤りと、受付範囲の外とで文言を分ける
+  function sidProblem() {
+    const sid = normId($('sid').value);
+    if (!sid || idOk(sid)) return '';
+    return idFormatOk(sid) ? 'この学籍番号は面談の対象外です' : 'がくせきばんごうを確認してください';
+  }
+
+  $('apply').addEventListener('click', async () => {
+    const miss = missing();
+    if (miss.length) { say(`${miss.join('・')}を入力してください`, true); return; }
+    const bad = sidProblem();
+    if (bad) { say(bad, true); return; }
+    if (!armed) {
+      armed = true;
+      $('apply').classList.add('armed');
+      $('apply').textContent = 'しんせい?';
+      say('問題なければもう一度タップ<br>修正が必要であれば、該当する項目をタップ');
+      revealSelected();
+      return;
+    }
+
+    $('apply').disabled = true;
+    say('しんせい中…');
+    let res;
+    try {
+      res = await run('book', { slotId: selectedId, studentId: $('sid').value, name: $('name').value });
+    } catch (err) {
+      res = { ok: false, message: '通信に失敗しました。もう一度お試しください。' };
+    }
+    $('apply').disabled = false;
+    if (res.ok) return showDone(res);
+
+    armed = false;
+    $('apply').classList.remove('armed');
+    $('apply').textContent = 'しんせい';
+    say(esc(res.message), true);
+    if (res.code === 'full' || res.code === 'gone') {
+      // 埋まった枠を選び直してもらう
+      selectedId = null;
+      loadSlots().then(() => say(esc(res.message), true));
+    }
+  });
+
+  function showDone(res) {
+    const s = data.slots.find((x) => x.id === selectedId) || {};
+    const [m, d] = md(s.date);
+    $('dName').textContent = $('name').value.trim();
+    $('dSid').textContent = normId($('sid').value);
+    $('dDate').textContent = `${m}/${d} ${wdOf(s)}`;
+    $('dTime').textContent = `${res.slot.start}-${res.slot.end}`;
+    const lines = ['上記の内容で予約を完了しました。'];
+    if (placeOf(res.slot)) lines.push(`場所：<b>${esc(placeOf(res.slot))}</b>`);
+    lines.push(res.mailed
+      ? `<b>${esc(res.email)}</b> に確認メールを送りました。`
+      : '確認メールを送れませんでした。この画面を控えておいてください。');
+    if (data.cancelContact) lines.push(`取消・変更：<b>${esc(data.cancelContact)}</b>`);
+    $('dNote').innerHTML = lines.map((l) => `<span class="ln">${l}</span>`).join('');
+    $('form').hidden = true;
+    $('done').hidden = false;
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  restoreMe();
+  loadSlots();
+</script>
+</body>
+</html>

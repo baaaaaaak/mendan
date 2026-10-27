@@ -1,0 +1,4 @@
+# GitHub Pages only: publish docs/ (student page), keep the source local
+/*
+!/docs/
+!/.gitignore
