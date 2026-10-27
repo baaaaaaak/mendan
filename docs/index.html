@@ -180,7 +180,9 @@
 
     /* 左に日付の窓、右に枠の帯（横スクロール）。枠は帯の左端で、日付は窓の両端で、それぞれの箱ごと切れる。
        切り取りを script に頼らないので、速く送っても枠が日付側に食い込まない */
-    .dates { display: flex; align-items: center; margin: 10px -22px 0 0; }
+    .dates { display: flex; align-items: center; margin: 10px -22px 0 2px; }
+    /* 読み込み中・枠なしの案内は窓を除いて左から */
+    .dates.empty .dwin { display: none; }
     /* 窓にはいま送っている日の日付を出す。次の日の日付が来ると押し出されて、窓の左端で切れて消える（位置は script） */
     .dwin { flex: none; position: relative; width: 38px; height: 54px; overflow: hidden; margin-right: 16px; }
     .dwin .date { position: absolute; left: 0; top: 11px; }
@@ -245,7 +247,7 @@
     <input id="sid" class="num" inputmode="numeric" autocomplete="off" maxlength="10" placeholder="がくせきばんごう" aria-label="学籍番号">
   </label>
   <p class="big">にちじ<sup class="hint" id="dateHint">スクロールで選択</sup></p>
-  <div class="dates"><div class="dwin" id="dwin"></div><div class="strip" id="strip"><p class="none">読み込み中…</p></div></div>
+  <div class="dates empty" id="dates"><div class="dwin" id="dwin"></div><div class="strip" id="strip"><p class="none">読み込み中…</p></div></div>
 
   <div class="gap-mid"></div>
   <button class="apply big" id="apply">よやく</button>
@@ -366,6 +368,7 @@
       renderSlots();
       checkSid();
     } catch (err) {
+      $('dates').classList.add('empty');
       $('strip').innerHTML = '<p class="none">読み込めませんでした</p>';
     }
   }
@@ -375,6 +378,7 @@
     if (!open.some((s) => s.id === selectedId)) selectedId = null;
     if (!open.length) {
       $('dwin').innerHTML = '';
+      $('dates').classList.add('empty');
       $('strip').innerHTML = '<p class="none">予約できる日時はありません</p>';
       return;
     }
@@ -396,6 +400,7 @@
       html += `<button class="slot" data-id="${esc(s.id)}" aria-pressed="${s.id === selectedId}">
         <b>${esc(s.start)}</b><span>-${esc(s.end)}</span></button>`;
     });
+    $('dates').classList.remove('empty');
     $('dwin').innerHTML = win;
     $('strip').innerHTML = html + '</span>';
     // 窓の幅は日付1つ分。帯の中の日付と同じ間隔（16px）になる
