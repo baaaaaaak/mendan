@@ -200,7 +200,7 @@
     .slot[aria-pressed="true"] { background: var(--d-green); color: #111; }
     .none { font-size: 12px; color: var(--d-hint); padding: 10px 0; }
 
-    /* しんせい：1回目で「しんせい?」、2回目で確定 */
+    /* よやく：1回目で「よやく?」、2回目で確定 */
     .apply { align-self: flex-start; background: none; border: 0; padding: 8px 24px 8px 0; text-align: left; font-family: var(--round); cursor: pointer; }
     .apply.armed { color: var(--d-green); }
     .apply:disabled { opacity: .6; }
@@ -237,7 +237,7 @@
   <div class="strip" id="strip"><p class="none">読み込み中…</p></div>
 
   <div class="gap-mid"></div>
-  <button class="apply big" id="apply">しんせい</button>
+  <button class="apply big" id="apply">よやく</button>
   <p class="msg" id="msg"></p>
 </section>
 
@@ -260,7 +260,7 @@
   const STORE = 'mendan.me';
   let data = null;
   let selectedId = null;
-  let armed = false;  // 1回目のしんせいで true。項目を触ると戻る
+  let armed = false;  // 1回目のよやくで true。項目を触ると戻る
 
   // GitHub Pages 版では MENDAN_API（ウェブアプリの URL）へ送る。text/plain のままにして事前確認の通信を避ける
   const run = (fn, ...args) => window.MENDAN_API
@@ -488,13 +488,13 @@
     startGlide();
   }
 
-  // ---- しんせい（2回タップで確定）
+  // ---- よやく（2回タップで確定）
 
   function disarm() {
     if (!armed && !$('msg').textContent) return;
     armed = false;
     $('apply').classList.remove('armed');
-    $('apply').textContent = 'しんせい';
+    $('apply').textContent = 'よやく';
     say('');
   }
 
@@ -527,14 +527,14 @@
     if (!armed) {
       armed = true;
       $('apply').classList.add('armed');
-      $('apply').textContent = 'しんせい?';
+      $('apply').textContent = 'よやく?';
       say('問題なければもう一度タップ<br>修正が必要であれば、該当する項目をタップ');
       revealSelected();
       return;
     }
 
     $('apply').disabled = true;
-    say('しんせい中…');
+    say('よやく中…');
     let res;
     try {
       res = await run('book', { slotId: selectedId, studentId: $('sid').value, name: $('name').value });
@@ -546,7 +546,7 @@
 
     armed = false;
     $('apply').classList.remove('armed');
-    $('apply').textContent = 'しんせい';
+    $('apply').textContent = 'よやく';
     say(esc(res.message), true);
     if (res.code === 'full' || res.code === 'gone') {
       // 埋まった枠を選び直してもらう
