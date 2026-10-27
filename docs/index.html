@@ -161,7 +161,7 @@
     .big { font-weight: 800; font-size: var(--big); line-height: 1.3; letter-spacing: .01em; color: var(--d-label); }
     .hint { white-space: nowrap; font-size: 11px; font-weight: 500; color: var(--d-hint); vertical-align: top; margin-left: 6px; line-height: 2.2; letter-spacing: .02em; }
     /* 見出しの「ばくめんだん」は項目より少し小さく明るく */
-    .big.mast, .done .big.mast { font-size: calc(var(--big) * .8); color: #d1d1d6; margin-bottom: 44px; }
+    .big.mast, .done .big.mast { font-size: calc(var(--big) * .8); color: #d1d1d6; margin-bottom: 60px; }
 
     .item { display: block; position: relative; cursor: text; }
     .item .val.filled { color: var(--d-green); }
@@ -184,19 +184,34 @@
       scrollbar-width: none; -webkit-overflow-scrolling: touch;
     }
     .strip::-webkit-scrollbar { display: none; }
-    .date { flex: none; display: flex; align-items: flex-start; gap: 1px; color: var(--d-label); font-size: 11px; font-weight: 500; line-height: 1; margin: 0 0 0 6px; font-variant-numeric: tabular-nums; }
-    .date:first-child { margin-left: 0; }
+    /* 1日分（日付＋枠）をまとめ、日付はその日の枠を送っている間だけ左端に残す。次の日が来ると押し出される。
+       押し出される途中で止まったときは script で近い方の位置へ寄せる */
+    .day { flex: none; display: flex; align-items: center; gap: 8px; }
+    .day + .day { margin-left: 6px; }
+    .date {
+      flex: none; display: flex; align-items: flex-start; gap: 1px; color: var(--d-label); font-size: 11px; font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums;
+      position: sticky; left: 0; z-index: 1; margin-right: 4px;
+    }
     .date .md { position: relative; width: 28px; height: 32px; }
     .date .md::before { content: ""; position: absolute; left: 3px; right: 3px; top: 50%; height: 1px; background: var(--d-label); transform: rotate(-45deg); }
     .date .m { position: absolute; left: 0; top: 0; }
     .date .d { position: absolute; right: 0; bottom: 0; }
     .date .w { font-size: 9px; }
+    /* 「よやく?」のときは選んだ枠の日付も緑にする */
+    .date.on { color: var(--d-green); }
+    .date.on .md::before { background: var(--d-green); }
     .slot {
       flex: none; display: grid; justify-items: start; gap: 0; height: 46px; padding: 6px 10px;
       background: rgba(36, 36, 38, .75); color: var(--d-chip-ink); border: 0; border-radius: 8px;
       font-family: var(--round); font-weight: 500; font-size: 12px; line-height: 1.35; font-variant-numeric: tabular-nums; text-align: left;
     }
     .slot span { padding-left: 3px; }
+    /* 左端に残った日付の右（間隔 12px、位置は --cut）より左にはみ出た部分を切る。
+       スクロールと同じ処理の中で切るので、速く送っても枠が日付側に食い込まない。使えない環境では script で切る */
+    @keyframes slot-cut { from { clip-path: inset(0 0 0 0); } to { clip-path: inset(0 0 0 100%); } }
+    @supports (animation-timeline: view()) {
+      .slot { animation: slot-cut linear both; animation-timeline: view(inline var(--cut, 72px) 0px); animation-range: exit 0% exit 100%; }
+    }
     .slot[aria-pressed="true"] { background: var(--d-green); color: #111; }
     .none { font-size: 12px; color: var(--d-hint); padding: 10px 0; }
 
@@ -371,16 +386,70 @@
     open.forEach((s) => {
       if (s.date !== last) {
         const [m, d] = md(s.date);
-        html += `<span class="date" aria-label="${+m}月${+d}日(${esc(wdOf(s))})"><span class="md"><span class="m">${m}</span><span class="d">${d}</span></span><span class="w">${esc(wdOf(s))}</span></span>`;
+        if (last) html += '</span>';
+        html += `<span class="day"><span class="date" aria-label="${+m}月${+d}日(${esc(wdOf(s))})"><span class="md"><span class="m">${m}</span><span class="d">${d}</span></span><span class="w">${esc(wdOf(s))}</span></span>`;
         last = s.date;
       }
       html += `<button class="slot" data-id="${esc(s.id)}" aria-pressed="${s.id === selectedId}">
         <b>${esc(s.start)}</b><span>-${esc(s.end)}</span></button>`;
     });
-    $('strip').innerHTML = html;
+    $('strip').innerHTML = html + '</span>';
+    const date = $('strip').querySelector('.date');
+    const pad = parseFloat(getComputedStyle($('strip')).paddingLeft) || 0;
+    $('strip').style.setProperty('--cut', `${pad + date.offsetWidth + 12}px`);
+    clipSlots();
   }
 
-  $('strip').addEventListener('scroll', () => { $('dateHint').hidden = true; started(); }, { passive: true });
+  // 左端に残った日付の下に枠が潜り込まないよう、日付の右（いつもの間隔 12px）より左にはみ出た部分を切る。
+  // 日付の後ろを塗りつぶさないので、背景の線と点はそのまま見える。CSS で切れる環境では何もしない
+  const cssCut = window.CSS && CSS.supports('animation-timeline', 'view()');
+  function clipSlots() {
+    if (cssCut) return;
+    $('strip').querySelectorAll('.day').forEach((day) => {
+      const edge = day.firstElementChild.getBoundingClientRect().right + 12;
+      day.querySelectorAll('.slot').forEach((c) => {
+        const r = c.getBoundingClientRect();
+        const cut = Math.min(edge - r.left, r.width);
+        c.style.clipPath = cut > 0.5 ? `inset(0 0 0 ${cut}px)` : '';
+      });
+    });
+  }
+  // 日付が押し出される途中で止まったら、近い方へ寄せる：
+  // その日の日付がまだ元の位置にある所（押し出され始める直前）か、次の日の日付が元の位置に来た所
+  let snapTimer = 0;
+  let touching = false;
+  function snapDates() {
+    if (touching || drag || glide.frame) return;
+    const st = $('strip');
+    const line = st.getBoundingClientRect().left + (parseFloat(getComputedStyle(st).paddingLeft) || 0);
+    for (const day of st.querySelectorAll('.day')) {
+      const next = day.nextElementSibling;
+      if (!next) break;
+      const end = day.getBoundingClientRect().right;
+      const full = day.firstElementChild.offsetWidth + 4;  // 日付＋右の余白。これより狭くなると押し出され始める
+      const gap = next.getBoundingClientRect().left - end;  // 次の日までの間隔
+      const r = end - line;
+      if (r < full - 1 && r > 1 - gap) {
+        const move = r > (full - gap) / 2 ? r - full : r + gap;
+        glide.pos = st.scrollLeft;
+        glide.target = Math.max(0, Math.min(maxLeft(), st.scrollLeft + move));
+        startGlide();
+        return;
+      }
+    }
+  }
+  const snapLater = () => { clearTimeout(snapTimer); snapTimer = setTimeout(snapDates, 150); };
+
+  let clipFrame = 0;
+  $('strip').addEventListener('scroll', () => {
+    $('dateHint').hidden = true;
+    started();
+    if (!clipFrame) clipFrame = requestAnimationFrame(() => { clipFrame = 0; clipSlots(); });
+    snapLater();
+  }, { passive: true });
+  $('strip').addEventListener('touchstart', () => { touching = true; }, { passive: true });
+  $('strip').addEventListener('touchend', () => { touching = false; snapLater(); }, { passive: true });
+  $('strip').addEventListener('touchcancel', () => { touching = false; snapLater(); }, { passive: true });
 
   // マウス操作の横送り。ホイールはばねで目標へ（少し行き過ぎて戻る）、
   // つかんで離したときは慣性で少し流れてから止まる。タッチとトラックパッドの横入力は標準のまま
@@ -407,7 +476,7 @@
     }
     st.scrollLeft = glide.pos;
     if (glide.target !== null || Math.abs(glide.vel) > 0.2) glide.frame = requestAnimationFrame(step);
-    else glide.frame = 0;
+    else { glide.frame = 0; snapLater(); }
   }
   function startGlide() {
     if (!glide.frame) glide.frame = requestAnimationFrame(step);
@@ -468,13 +537,22 @@
     disarm();
   });
 
-  // 選んだ枠が横スクロールの外にあっても確かめられるよう、その日付から見える位置まで送る
+  const dateOf = (chip) => chip && chip.parentElement.querySelector('.date');
+
+  function markDate(on) {
+    $('strip').querySelectorAll('.date.on').forEach((x) => x.classList.remove('on'));
+    const date = on && dateOf($('strip').querySelector('.slot[aria-pressed="true"]'));
+    if (date) date.classList.add('on');
+  }
+
+  // 選んだ枠が横スクロールの外にあっても確かめられるよう、その日の始まりから見える位置まで送る。
+  // 日付は左端に残るので、枠が遠くても日付と一緒に見える
   function revealSelected() {
     const st = $('strip');
     const chip = st.querySelector('.slot[aria-pressed="true"]');
     if (!chip) return;
-    let date = chip.previousElementSibling;
-    while (date && !date.classList.contains('date')) date = date.previousElementSibling;
+    // 左端に残っている日付は位置が動くので、測るのは1日分のまとまりの方
+    const date = chip.parentElement;
     const pad = parseFloat(getComputedStyle(st).paddingLeft) || 0;
     const base = st.getBoundingClientRect().left;
     const leftOf = (el) => st.scrollLeft + el.getBoundingClientRect().left - base;
@@ -495,6 +573,7 @@
     armed = false;
     $('apply').classList.remove('armed');
     $('apply').textContent = 'よやく';
+    markDate(false);
     say('');
   }
 
@@ -528,6 +607,7 @@
       armed = true;
       $('apply').classList.add('armed');
       $('apply').textContent = 'よやく?';
+      markDate(true);
       say('問題なければもう一度タップ<br>修正が必要であれば、該当する項目をタップ');
       revealSelected();
       return;
@@ -547,6 +627,7 @@
     armed = false;
     $('apply').classList.remove('armed');
     $('apply').textContent = 'よやく';
+    markDate(false);
     say(esc(res.message), true);
     if (res.code === 'full' || res.code === 'gone') {
       // 埋まった枠を選び直してもらう
